@@ -11,6 +11,7 @@ const socialSchema = new mongoose.Schema(
 const bioSchema = new mongoose.Schema({
   name: { type: String },
   age: { type: Number },
+  location: { type: String },
   currentLocation: { type: String },
   about: { type: String },
   summary: { type: String },
@@ -76,12 +77,14 @@ const educationSchema = new mongoose.Schema(
 
 const userSchema = new mongoose.Schema(
   {
+    title:{type:String},
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, default: 'user' },
     username: { type: String, required: true, unique: true },
     image: { type: String },
     phone: { type: String },
+    
 
     bio: bioSchema,
     social: [socialSchema],
