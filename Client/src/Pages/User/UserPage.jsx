@@ -71,17 +71,40 @@ function UserPage() {
   // Set initial form values
   useEffect(() => {
     if (user) {
-      const mapFileToUpload = filePath =>
-        filePath
-          ? [
-              {
-                uid: String(Math.random()), // unique uid
-                name: filePath.split('/').pop(),
-                status: 'done',
-                url: `${import.meta.env.VITE_BACKEND_API}/public/${filePath}`,
-              },
-            ]
-          : [];
+      const mapFileToUpload = file => {
+        if (!file) return [];
+
+        if (Array.isArray(file)) {
+          return file.map(f => {
+            // if object with url already
+            if (f && typeof f === 'object' && f.url) {
+              return {
+                uid: f.uid || String(Math.random()),
+                name: f.name || f.url.split('/').pop(),
+                status: f.status || 'done',
+                url: f.url,
+              };
+            }
+            // if string path
+            return {
+              uid: String(Math.random()),
+              name: f.split('/').pop(),
+              status: 'done',
+              url: `${import.meta.env.VITE_BACKEND_API}/public/${f}`,
+            };
+          });
+        }
+
+        // single string path
+        return [
+          {
+            uid: String(Math.random()),
+            name: file.split('/').pop(),
+            status: 'done',
+            url: `${import.meta.env.VITE_BACKEND_API}/public/${file}`,
+          },
+        ];
+      };
 
       form.setFieldsValue({
         bio: user.bio || {},
@@ -101,13 +124,24 @@ function UserPage() {
           : [{ category: '', skills: [''], image: [] }],
 
         // ✅ projects: each project with mapped image
-        projects:
-          user.projects?.map(proj => ({
-            ...proj,
-            startDate: proj.startDate ? dayjs(proj.startDate) : null,
-            endDate: proj.endDate ? dayjs(proj.endDate) : null,
-            image: mapFileToUpload(proj.image),
-          })) || [],
+
+        projects: user.projects?.length
+          ? user.projects.map(proj => ({
+              ...proj,
+              image: proj.image
+                ? [
+                    {
+                      uid: String(Math.random()),
+                      name: proj.image.split('/').pop(),
+                      status: 'done',
+                      url: `${import.meta.env.VITE_BACKEND_API}/public/${
+                        proj.image
+                      }`,
+                    },
+                  ]
+                : [],
+            }))
+          : [{ title: '', description: '', image: [] }],
 
         experience:
           user.experience?.map(exp => ({
@@ -121,6 +155,22 @@ function UserPage() {
             ...edu,
             startDate: edu.startDate ? dayjs(edu.startDate) : null,
             endDate: edu.endDate ? dayjs(edu.endDate) : null,
+          })) || [],
+        certificates:
+          user.certificates?.map(cert => ({
+            ...cert,
+            image: cert.image
+              ? [
+                  {
+                    uid: String(Math.random()),
+                    name: cert.image.split('/').pop(),
+                    status: 'done',
+                    url: `${import.meta.env.VITE_BACKEND_API}/public/${
+                      cert.image
+                    }`,
+                  },
+                ]
+              : [],
           })) || [],
 
         resumePdf: mapFileToUpload(user.resumePdf),
@@ -168,16 +218,35 @@ function UserPage() {
       formData.append('skills', JSON.stringify(skillsData));
     }
 
-    // handle projects with optional image
+    // Handle projects
     if (values.projects) {
-      const projectsData = values.projects.map(proj => {
+      const projectsData = values.projects.map((proj, idx) => {
         const { image, ...rest } = proj;
         if (image && image[0]?.originFileObj) {
-          formData.append('projectImage', image[0].originFileObj);
+          formData.append(`projectImage_${idx}`, image[0].originFileObj);
         }
         return rest;
       });
       formData.append('projects', JSON.stringify(projectsData));
+    }
+
+    // Handle certificates
+    if (values.certificates) {
+      const certificatesData = values.certificates.map((cert, idx) => {
+        const { image, ...rest } = cert;
+
+        // Keep old image if no new file
+        if (image && image[0]?.originFileObj) {
+          formData.append(`certificateImage_${idx}`, image[0].originFileObj);
+          rest.image = null; // will be replaced on server
+        } else if (image && image[0]?.url) {
+          // preserve existing image URL
+          rest.image = image[0].url.split('/public/')[1]; // "certificate/filename.jpg"
+        }
+
+        return rest;
+      });
+      formData.append('certificates', JSON.stringify(certificatesData));
     }
 
     updateUser(formData);
@@ -587,6 +656,79 @@ function UserPage() {
           )}
         </Form.List>
 
+        <h2 className="text-xl font-semibold mt-6">Certificates</h2>
+        <Form.List name="certificates">
+          {(fields, { add, remove }) => (
+            <>
+              {fields.map((field, idx) => (
+                <div
+                  key={`cert-${field.key}-${idx}`}
+                  className="border p-3 mb-3 rounded"
+                >
+                  <Space align="baseline">
+                    <h4>Certificate</h4>
+                    <MinusCircleOutlined onClick={() => remove(field.name)} />
+                  </Space>
+
+                  <Form.Item
+                    {...field}
+                    label="Title"
+                    name={[field.name, 'title']}
+                    rules={[{ required: true, message: 'Title required' }]}
+                  >
+                    <Input placeholder="Certificate title" />
+                  </Form.Item>
+
+                  <Form.Item
+                    {...field}
+                    label="Issue Date"
+                    name={[field.name, 'issueDate']}
+                  >
+                    <DatePicker />
+                  </Form.Item>
+
+                  <Form.Item
+                    {...field}
+                    label="Certificate Image"
+                    name={[field.name, 'image']}
+                    valuePropName="fileList"
+                    getValueFromEvent={e =>
+                      Array.isArray(e) ? e : e?.fileList
+                    }
+                  >
+                    <Upload
+                      listType="picture"
+                      accept="image/*"
+                      beforeUpload={() => false}
+                      maxCount={1}
+                    >
+                      <Button>Upload Certificate Image</Button>
+                    </Upload>
+                  </Form.Item>
+
+                  <Form.Item
+                    {...field}
+                    label="Link (optional)"
+                    name={[field.name, 'link']}
+                  >
+                    <Input placeholder="Certificate verification link" />
+                  </Form.Item>
+                </div>
+              ))}
+              <Form.Item>
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  block
+                  icon={<PlusOutlined />}
+                >
+                  Add Certificate
+                </Button>
+              </Form.Item>
+            </>
+          )}
+        </Form.List>
+
         {/* Resume / CV */}
         <h2 className="text-xl font-semibold mt-6">Resume / CV</h2>
         <Form.Item
@@ -598,12 +740,11 @@ function UserPage() {
             accept="application/pdf"
             beforeUpload={() => false}
             maxCount={1}
-           
           >
             <Button>Upload Resume PDF</Button>
           </Upload>
         </Form.Item>
-        
+
         <Form.Item
           name="cvPdf"
           valuePropName="fileList"

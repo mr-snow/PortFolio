@@ -76,6 +76,16 @@ const educationSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const certificateSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    image: { type: String, required: true },
+    issueDate: { type: Date },
+    link: { type: String },
+  },
+  { _id: false }
+);
+
 const skillCategorySchema = new mongoose.Schema({
   category: String,
   skills: [
@@ -110,6 +120,7 @@ const userSchema = new mongoose.Schema(
     projects: [projectSchema],
     experience: [experienceSchema],
     education: [educationSchema],
+    certificates: [certificateSchema],
   },
   { timestamps: true }
 );

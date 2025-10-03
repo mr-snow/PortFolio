@@ -1,5 +1,6 @@
 const { default: mongoose } = require('mongoose');
 const userModel = require('../db/models/userModel');
+const fs = require('fs');
 
 module.exports.createUser = async (req, res) => {
   try {
@@ -86,49 +87,7 @@ module.exports.deleteUser = async (req, res) => {
 // module.exports.updateUser = async (req, res) => {
 //   try {
 //     const { id } = req.params;
-//     const body = req.body;
-//     const file = req.file;
-
-//     if (req.file) {
-//       body.image = `images/${req.file.filename}`;
-//     }
-
-//     const userId = new mongoose.Types.ObjectId(id);
-//     if (!userId) {
-//       throw new Error('id is missing ');
-//     }
-
-//     const response = await userModel.findByIdAndUpdate(
-//       { _id: id },
-//       {
-//         $set: body,
-//       },
-//       { new: true }
-//     );
-//     return res
-//       .status(200)
-//       .json({ message: 'user update successful', data: response, file });
-//   } catch (error) {
-//     return res
-//       .status(500)
-//       .json({ message: error.message || 'user upation Failed' });
-//   }
-// };
-
-// module.exports.updateUser = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     let body = req.body;
-
-//     if (!id) throw new Error('User ID is missing');
-
-//     // Handle uploaded files
-//     if (req.files) {
-//       if (req.files.image) body.image = `images/${req.files.image[0].filename}`;
-//       if (req.files.resumePdf)
-//         body.resumePdf = `images/${req.files.resumePdf[0].filename}`;
-//       if (req.files.cvPdf) body.cvPdf = `images/${req.files.cvPdf[0].filename}`;
-//     }
+//     const body = { ...req.body };
 
 //     // Parse JSON fields
 //     [
@@ -136,6 +95,7 @@ module.exports.deleteUser = async (req, res) => {
 //       'social',
 //       'skills',
 //       'currentStatus',
+//       'certificates',
 //       'projects',
 //       'experience',
 //       'education',
@@ -144,86 +104,60 @@ module.exports.deleteUser = async (req, res) => {
 //         try {
 //           body[field] = JSON.parse(body[field]);
 //         } catch (err) {
-//           console.log(`Failed to parse ${field}:`, err.message);
-//         }
-//       }
-//     });
-
-//     // Convert dates for projects, experience, education
-//     const parseDates = arr =>
-//       arr?.map(item => ({
-//         ...item,
-//         startDate: item.startDate ? new Date(item.startDate) : null,
-//         endDate: item.endDate ? new Date(item.endDate) : null,
-//       }));
-
-//     if (body.projects) body.projects = parseDates(body.projects);
-//     if (body.experience) body.experience = parseDates(body.experience);
-//     if (body.education) body.education = parseDates(body.education);
-
-//     // Update user
-//     const response = await userModel.findByIdAndUpdate(
-//       id,
-//       { $set: body },
-//       { new: true }
-//     );
-
-//     return res.status(200).json({
-//       message: 'User updated successfully',
-//       data: response,
-//     });
-//   } catch (error) {
-//     return res.status(500).json({
-//       message: error.message || 'User update failed',
-//     });
-//   }
-// };
-
-// module.exports.updateUser = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const body = { ...req.body };
-
-//     // Parse JSON fields that are sent as strings
-//     [
-//       'bio',
-//       'social',
-//       'skills',
-//       'currentStatus',
-//       'projects',
-//       'experience',
-//       'education',
-//     ].forEach(field => {
-//       if (body[field]) {
-//         try {
-//           body[field] = JSON.parse(body[field]);
-//         } catch (err) {
-//           // Keep original if already object
+//           // already object, ignore
 //         }
 //       }
 //     });
 
 //     // Handle files
 //     if (req.files) {
-//       if (req.files['image'])
+//       if (req.files['image']) {
 //         body.image = `images/${req.files['image'][0].filename}`;
-//       if (req.files['resumePdf'])
+//       }
+//       if (req.files['resumePdf']) {
 //         body.resumePdf = `resume/${req.files['resumePdf'][0].filename}`;
-//       if (req.files['cvPdf'])
+//       }
+//       if (req.files['cvPdf']) {
 //         body.cvPdf = `cv/${req.files['cvPdf'][0].filename}`;
-//       if (req.files['projectImage']) {
-//         // could be multiple
+//       }
+
+//       // Handle project images
+//       if (req.files['projectImage'] && Array.isArray(body.projects)) {
 //         body.projects = body.projects.map((proj, idx) => ({
 //           ...proj,
-//           image: `images/projectImage/${req.files['projectImage'][idx].filename}`,
+//           image: req.files['projectImage'][idx]
+//             ? `projectImage/${req.files['projectImage'][idx].filename}`
+//             : proj.image,
 //         }));
 //       }
-//       if (req.files['skillImage']) {
+
+//       if (req.files['projectImage'] && Array.isArray(body.projects)) {
+//   body.projects = body.projects.map((proj, idx) => ({
+//     ...proj,
+//     image: req.files['projectImage'][idx]
+//       ? `projectImage/${req.files['projectImage'][idx].filename}`
+//       : proj.image, // ensure this is string
+//   }));
+// }
+
+//       // Handle skill images
+//       if (req.files['skillImage'] && Array.isArray(body.skills)) {
 //         body.skills = body.skills.map((skill, idx) => ({
 //           ...skill,
-//           image: `images/skillimage/${req.files['skillImage'][idx].filename}`,
+//           image: req.files['skillImage'][idx]
+//             ? `skillImage/${req.files['skillImage'][idx].filename}`
+//             : skill.image,
 //         }));
 //       }
+//     }
+
+//     if (req.files['certificateImage'] && Array.isArray(body.certificates)) {
+//       body.certificates = body.certificates.map((cert, idx) => ({
+//         ...cert,
+//         image: req.files['certificateImage'][idx]
+//           ? `certificate/${req.files['certificateImage'][idx].filename}`
+//           : cert.image,
+//       }));
 //     }
 
 //     const response = await userModel.findByIdAndUpdate(
@@ -241,11 +175,107 @@ module.exports.deleteUser = async (req, res) => {
 //       .json({ message: error.message || 'User update failed' });
 //   }
 // };
+// module.exports.updateUser = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const body = { ...req.body };
+
+//     // Parse JSON fields
+//     [
+//       'bio',
+//       'social',
+//       'skills',
+//       'currentStatus',
+//       'certificates',
+//       'projects',
+//       'experience',
+//       'education',
+//     ].forEach(field => {
+//       if (body[field]) {
+//         try {
+//           body[field] = JSON.parse(body[field]);
+//         } catch (err) {
+//           // already object, ignore
+//         }
+//       }
+//     });
+
+//     // Handle files using indexed field names
+//     if (req.files) {
+//       req.files.forEach(file => {
+//         const idx = file.fieldname.split('_')[1]; // might be undefined
+
+//         if (file.fieldname === 'image' && file.filename) {
+//           body.image = `images/${file.filename}`;
+//         } else if (file.fieldname === 'resumePdf' && file.filename) {
+//           body.resumePdf = `resume/${file.filename}`;
+//         } else if (file.fieldname === 'cvPdf' && file.filename) {
+//           body.cvPdf = `cv/${file.filename}`;
+//         }
+//         // Projects
+//         else if (
+//           file.fieldname.startsWith('projectImage') &&
+//           Array.isArray(body.projects) &&
+//           body.projects[idx]
+//         ) {
+//           if (file.filename) {
+//             body.projects[idx].image = `projectImage/${file.filename}`;
+//           } else if (!body.projects[idx].image && req.body.projects) {
+//             body.projects[idx].image = JSON.parse(req.body.projects)[idx]?.image || null;
+//           }
+//         }
+//         // Skills
+//         else if (
+//           file.fieldname.startsWith('skillImage') &&
+//           Array.isArray(body.skills) &&
+//           body.skills[idx]
+//         ) {
+//           if (file.filename) {
+//             body.skills[idx].image = `skillImage/${file.filename}`;
+//           } else if (!body.skills[idx].image && req.body.skills) {
+//             body.skills[idx].image = JSON.parse(req.body.skills)[idx]?.image || null;
+//           }
+//         }
+//         // Certificates
+//         else if (
+//           file.fieldname.startsWith('certificateImage') &&
+//           Array.isArray(body.certificates) &&
+//           body.certificates[idx]
+//         ) {
+//           if (file.filename) {
+//             body.certificates[idx].image = `certificate/${file.filename}`;
+//           } else if (!body.certificates[idx].image && req.body.certificates) {
+//             body.certificates[idx].image = JSON.parse(req.body.certificates)[idx]?.image || null;
+//           }
+//         }
+//       });
+//     }
+
+//     // Update user in DB
+//     const response = await userModel.findByIdAndUpdate(
+//       id,
+//       { $set: body },
+//       { new: true }
+//     );
+
+//     return res
+//       .status(200)
+//       .json({ message: 'User updated successfully', data: response });
+//   } catch (error) {
+//     console.error(error);
+//     return res
+//       .status(500)
+//       .json({ message: error.message || 'User update failed' });
+//   }
+// };
 
 module.exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const body = { ...req.body };
+
+    // Fetch existing user to preserve old images if no new file is uploaded
+    const existingUser = await userModel.findById(id);
 
     // Parse JSON fields
     [
@@ -253,6 +283,7 @@ module.exports.updateUser = async (req, res) => {
       'social',
       'skills',
       'currentStatus',
+      'certificates',
       'projects',
       'experience',
       'education',
@@ -266,39 +297,60 @@ module.exports.updateUser = async (req, res) => {
       }
     });
 
-    // Handle files
+    // Helper to merge images with existing user data
+    const mergeImages = (newArray, existingArray) => {
+      if (!Array.isArray(newArray)) return existingArray || [];
+      return newArray.map((item, idx) => {
+        const existingItem = existingArray?.[idx] || {};
+        return {
+          ...item,
+          image: item.image || existingItem.image || null,
+        };
+      });
+    };
+
+    // Merge images for nested arrays
+    body.projects = mergeImages(body.projects, existingUser.projects);
+    body.skills = mergeImages(body.skills, existingUser.skills);
+    body.certificates = mergeImages(
+      body.certificates,
+      existingUser.certificates
+    );
+
+    // Handle uploaded files
     if (req.files) {
-      if (req.files['image']) {
-        body.image = `images/${req.files['image'][0].filename}`;
-      }
-      if (req.files['resumePdf']) {
-        body.resumePdf = `resume/${req.files['resumePdf'][0].filename}`;
-      }
-      if (req.files['cvPdf']) {
-        body.cvPdf = `cv/${req.files['cvPdf'][0].filename}`;
-      }
+      req.files.forEach(file => {
+        const idx = file.fieldname.split('_')[1]; // may be undefined
 
-      // Handle project images
-      if (req.files['projectImage'] && Array.isArray(body.projects)) {
-        body.projects = body.projects.map((proj, idx) => ({
-          ...proj,
-          image: req.files['projectImage'][idx]
-            ? `projectImage/${req.files['projectImage'][idx].filename}`
-            : proj.image,
-        }));
-      }
-
-      // Handle skill images
-      if (req.files['skillImage'] && Array.isArray(body.skills)) {
-        body.skills = body.skills.map((skill, idx) => ({
-          ...skill,
-          image: req.files['skillImage'][idx]
-            ? `skillImage/${req.files['skillImage'][idx].filename}`
-            : skill.image,
-        }));
-      }
+        if (file.fieldname === 'image' && file.filename) {
+          body.image = `images/${file.filename}`;
+        } else if (file.fieldname === 'resumePdf' && file.filename) {
+          body.resumePdf = `resume/${file.filename}`;
+        } else if (file.fieldname === 'cvPdf' && file.filename) {
+          body.cvPdf = `cv/${file.filename}`;
+        } else if (
+          file.fieldname.startsWith('projectImage') &&
+          Array.isArray(body.projects) &&
+          body.projects[idx]
+        ) {
+          body.projects[idx].image = `projectImage/${file.filename}`;
+        } else if (
+          file.fieldname.startsWith('skillImage') &&
+          Array.isArray(body.skills) &&
+          body.skills[idx]
+        ) {
+          body.skills[idx].image = `skillImage/${file.filename}`;
+        } else if (
+          file.fieldname.startsWith('certificateImage') &&
+          Array.isArray(body.certificates) &&
+          body.certificates[idx]
+        ) {
+          body.certificates[idx].image = `certificate/${file.filename}`;
+        }
+      });
     }
 
+    // Update user in DB
     const response = await userModel.findByIdAndUpdate(
       id,
       { $set: body },
@@ -309,6 +361,7 @@ module.exports.updateUser = async (req, res) => {
       .status(200)
       .json({ message: 'User updated successfully', data: response });
   } catch (error) {
+    console.error(error);
     return res
       .status(500)
       .json({ message: error.message || 'User update failed' });
