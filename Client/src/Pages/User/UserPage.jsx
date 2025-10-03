@@ -75,20 +75,13 @@ function UserPage() {
         filePath
           ? [
               {
-                uid: '-1',
+                uid: String(Math.random()), // unique uid
                 name: filePath.split('/').pop(),
                 status: 'done',
                 url: `${import.meta.env.VITE_BACKEND_API}/public/${filePath}`,
               },
             ]
           : [];
-
-      const mapDates = arr =>
-        arr?.map(item => ({
-          ...item,
-          startDate: item.startDate ? dayjs(item.startDate) : null,
-          endDate: item.endDate ? dayjs(item.endDate) : null,
-        }));
 
       form.setFieldsValue({
         bio: user.bio || {},
@@ -98,13 +91,38 @@ function UserPage() {
         title: user.title,
         role: user.role,
         social: user.social?.length ? user.social : [],
+
+        // ✅ skills: each category with mapped image
         skills: user.skills?.length
-          ? user.skills
-          : [{ category: '', skills: [''] }],
-        currentStatus: user.currentStatus || {},
-        projects: mapDates(user.projects),
-        experience: mapDates(user.experience),
-        education: mapDates(user.education),
+          ? user.skills.map(skill => ({
+              ...skill,
+              image: mapFileToUpload(skill.image),
+            }))
+          : [{ category: '', skills: [''], image: [] }],
+
+        // ✅ projects: each project with mapped image
+        projects:
+          user.projects?.map(proj => ({
+            ...proj,
+            startDate: proj.startDate ? dayjs(proj.startDate) : null,
+            endDate: proj.endDate ? dayjs(proj.endDate) : null,
+            image: mapFileToUpload(proj.image),
+          })) || [],
+
+        experience:
+          user.experience?.map(exp => ({
+            ...exp,
+            startDate: exp.startDate ? dayjs(exp.startDate) : null,
+            endDate: exp.endDate ? dayjs(exp.endDate) : null,
+          })) || [],
+
+        education:
+          user.education?.map(edu => ({
+            ...edu,
+            startDate: edu.startDate ? dayjs(edu.startDate) : null,
+            endDate: edu.endDate ? dayjs(edu.endDate) : null,
+          })) || [],
+
         resumePdf: mapFileToUpload(user.resumePdf),
         cvPdf: mapFileToUpload(user.cvPdf),
         image: mapFileToUpload(user.image),
@@ -116,29 +134,51 @@ function UserPage() {
   const onFinish = values => {
     const formData = new FormData();
 
+    // handle main files
     ['image', 'resumePdf', 'cvPdf'].forEach(field => {
       if (values[field] && values[field][0]?.originFileObj) {
         formData.append(field, values[field][0].originFileObj);
       }
     });
 
+    // handle simple fields
     ['email', 'title', 'username', 'role', 'phone', 'password'].forEach(
       field => {
         if (values[field]) formData.append(field, values[field]);
       }
     );
 
-    [
-      'bio',
-      'social',
-      'skills',
-      'currentStatus',
-      'projects',
-      'experience',
-      'education',
-    ].forEach(field => {
-      if (values[field]) formData.append(field, JSON.stringify(values[field]));
-    });
+    // handle nested json
+    ['bio', 'social', 'currentStatus', 'experience', 'education'].forEach(
+      field => {
+        if (values[field])
+          formData.append(field, JSON.stringify(values[field]));
+      }
+    );
+
+    // handle skills with optional image
+    if (values.skills) {
+      const skillsData = values.skills.map(skill => {
+        const { image, ...rest } = skill;
+        if (image && image[0]?.originFileObj) {
+          formData.append('skillImage', image[0].originFileObj);
+        }
+        return rest;
+      });
+      formData.append('skills', JSON.stringify(skillsData));
+    }
+
+    // handle projects with optional image
+    if (values.projects) {
+      const projectsData = values.projects.map(proj => {
+        const { image, ...rest } = proj;
+        if (image && image[0]?.originFileObj) {
+          formData.append('projectImage', image[0].originFileObj);
+        }
+        return rest;
+      });
+      formData.append('projects', JSON.stringify(projectsData));
+    }
 
     updateUser(formData);
   };
@@ -156,13 +196,21 @@ function UserPage() {
       <Form form={form} layout="vertical" onFinish={onFinish}>
         {/* Contact Info */}
         <h2 className="text-xl font-semibold mt-4">Contact Info</h2>
-        <Form.Item label="Username" name="username" rules={[{ required: true }]}>
+        <Form.Item
+          label="Username"
+          name="username"
+          rules={[{ required: true }]}
+        >
           <Input />
         </Form.Item>
         <Form.Item label="Title" name="title">
           <Input placeholder="Your professional title" />
         </Form.Item>
-        <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email' }]}>
+        <Form.Item
+          label="Email"
+          name="email"
+          rules={[{ required: true, type: 'email' }]}
+        >
           <Input />
         </Form.Item>
         <Form.Item label="Phone" name="phone">
@@ -177,12 +225,24 @@ function UserPage() {
 
         {/* Bio */}
         <h2 className="text-xl font-semibold mt-6">Bio</h2>
-        <Form.Item label="Name" name={['bio', 'name']}><Input /></Form.Item>
-        <Form.Item label="Age" name={['bio', 'age']}><Input type="number" /></Form.Item>
-        <Form.Item label="Current Location" name={['bio', 'currentLocation']}><Input /></Form.Item>
-        <Form.Item label="Original Location" name={['bio', 'location']}><Input /></Form.Item>
-        <Form.Item label="About" name={['bio', 'about']}><TextArea rows={2} /></Form.Item>
-        <Form.Item label="Summary" name={['bio', 'summary']}><TextArea rows={4} /></Form.Item>
+        <Form.Item label="Name" name={['bio', 'name']}>
+          <Input />
+        </Form.Item>
+        <Form.Item label="Age" name={['bio', 'age']}>
+          <Input type="number" />
+        </Form.Item>
+        <Form.Item label="Current Location" name={['bio', 'currentLocation']}>
+          <Input />
+        </Form.Item>
+        <Form.Item label="Original Location" name={['bio', 'location']}>
+          <Input />
+        </Form.Item>
+        <Form.Item label="About" name={['bio', 'about']}>
+          <TextArea rows={2} />
+        </Form.Item>
+        <Form.Item label="Summary" name={['bio', 'summary']}>
+          <TextArea rows={4} />
+        </Form.Item>
 
         {/* Social Links */}
         <h2 className="text-xl font-semibold mt-6">Social Links</h2>
@@ -191,17 +251,32 @@ function UserPage() {
             <>
               {fields.map((field, idx) => (
                 <Space key={`social-${field.key}-${idx}`} align="baseline">
-                  <Form.Item {...field} label="Platform" name={[field.name, 'platform']} rules={[{ required: true }]}>
+                  <Form.Item
+                    {...field}
+                    label="Platform"
+                    name={[field.name, 'platform']}
+                    rules={[{ required: true }]}
+                  >
                     <Input placeholder="e.g., LinkedIn" />
                   </Form.Item>
-                  <Form.Item {...field} label="Link" name={[field.name, 'link']} rules={[{ required: true }]}>
+                  <Form.Item
+                    {...field}
+                    label="Link"
+                    name={[field.name, 'link']}
+                    rules={[{ required: true }]}
+                  >
                     <Input placeholder="https://..." />
                   </Form.Item>
                   <MinusCircleOutlined onClick={() => remove(field.name)} />
                 </Space>
               ))}
               <Form.Item>
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  block
+                  icon={<PlusOutlined />}
+                >
                   Add Social
                 </Button>
               </Form.Item>
@@ -215,26 +290,70 @@ function UserPage() {
           {(categories, { add: addCategory, remove: removeCategory }) => (
             <>
               {categories.map((catField, catIdx) => (
-                <div key={`skillcat-${catField.key}-${catIdx}`} className="border p-3 mb-3 rounded">
+                <div
+                  key={`skillcat-${catField.key}-${catIdx}`}
+                  className="border p-3 mb-3 rounded"
+                >
                   <Space align="baseline" className="mb-2">
-                    <Form.Item {...catField} label="Category" name={[catField.name, 'category']} rules={[{ required: true, message: 'Category required' }]}>
+                    <Form.Item
+                      {...catField}
+                      label="Category"
+                      name={[catField.name, 'category']}
+                      rules={[{ required: true, message: 'Category required' }]}
+                    >
                       <Input placeholder="Frontend, Backend..." />
                     </Form.Item>
-                    <MinusCircleOutlined onClick={() => removeCategory(catField.name)} />
+                    <Form.Item
+                      {...catField}
+                      label="Skill Image"
+                      name={[catField.name, 'image']}
+                      valuePropName="fileList"
+                      getValueFromEvent={e =>
+                        Array.isArray(e) ? e : e?.fileList
+                      }
+                    >
+                      <Upload
+                        listType="picture"
+                        accept="image/*"
+                        beforeUpload={() => false}
+                        maxCount={1}
+                      >
+                        <Button>Upload Skill Image</Button>
+                      </Upload>
+                    </Form.Item>
+                    <MinusCircleOutlined
+                      onClick={() => removeCategory(catField.name)}
+                    />
                   </Space>
                   <Form.List name={[catField.name, 'skills']}>
                     {(skills, { add: addSkill, remove: removeSkill }) => (
                       <>
                         {skills.map((skillField, skillIdx) => (
-                          <Space key={`skill-${skillField.key}-${skillIdx}`} align="baseline">
-                            <Form.Item {...skillField} name={[skillField.name]} rules={[{ required: true, message: 'Skill required' }]}>
+                          <Space
+                            key={`skill-${skillField.key}-${skillIdx}`}
+                            align="baseline"
+                          >
+                            <Form.Item
+                              {...skillField}
+                              name={[skillField.name]}
+                              rules={[
+                                { required: true, message: 'Skill required' },
+                              ]}
+                            >
                               <Input placeholder="Skill name" />
                             </Form.Item>
-                            <MinusCircleOutlined onClick={() => removeSkill(skillField.name)} />
+                            <MinusCircleOutlined
+                              onClick={() => removeSkill(skillField.name)}
+                            />
                           </Space>
                         ))}
                         <Form.Item>
-                          <Button type="dashed" onClick={() => addSkill()} block icon={<PlusOutlined />}>
+                          <Button
+                            type="dashed"
+                            onClick={() => addSkill()}
+                            block
+                            icon={<PlusOutlined />}
+                          >
                             Add Skill
                           </Button>
                         </Form.Item>
@@ -244,7 +363,12 @@ function UserPage() {
                 </div>
               ))}
               <Form.Item>
-                <Button type="dashed" onClick={() => addCategory()} block icon={<PlusOutlined />}>
+                <Button
+                  type="dashed"
+                  onClick={() => addCategory()}
+                  block
+                  icon={<PlusOutlined />}
+                >
                   Add Category
                 </Button>
               </Form.Item>
@@ -254,9 +378,18 @@ function UserPage() {
 
         {/* Current Status */}
         <h2 className="text-xl font-semibold mt-6">Current Status</h2>
-        <Form.Item label="Company" name={['currentStatus', 'company']}><Input /></Form.Item>
-        <Form.Item label="Position" name={['currentStatus', 'position']}><Input /></Form.Item>
-        <Form.Item name={['currentStatus', 'asPresent']} valuePropName="checked"><Checkbox>As Present</Checkbox></Form.Item>
+        <Form.Item label="Company" name={['currentStatus', 'company']}>
+          <Input />
+        </Form.Item>
+        <Form.Item label="Position" name={['currentStatus', 'position']}>
+          <Input />
+        </Form.Item>
+        <Form.Item
+          name={['currentStatus', 'asPresent']}
+          valuePropName="checked"
+        >
+          <Checkbox>As Present</Checkbox>
+        </Form.Item>
 
         {/* Projects */}
         <h2 className="text-xl font-semibold mt-6">Projects</h2>
@@ -264,13 +397,28 @@ function UserPage() {
           {(fields, { add, remove }) => (
             <>
               {fields.map((field, idx) => (
-                <div key={`project-${field.key}-${idx}`} className="border p-3 mb-3 rounded">
+                <div
+                  key={`project-${field.key}-${idx}`}
+                  className="border p-3 mb-3 rounded"
+                >
                   <Space align="baseline">
                     <h4>Project</h4>
                     <MinusCircleOutlined onClick={() => remove(field.name)} />
                   </Space>
-                  {['title', 'description', 'gitLink', 'liveLink', 'technologies', 'status'].map((f, fIdx) => (
-                    <Form.Item key={`${field.key}-${f}-${fIdx}`} {...field} label={f.charAt(0).toUpperCase() + f.slice(1)} name={[field.name, f]}>
+                  {[
+                    'title',
+                    'description',
+                    'gitLink',
+                    'liveLink',
+                    'technologies',
+                    'status',
+                  ].map((f, fIdx) => (
+                    <Form.Item
+                      key={`${field.key}-${f}-${fIdx}`}
+                      {...field}
+                      label={f.charAt(0).toUpperCase() + f.slice(1)}
+                      name={[field.name, f]}
+                    >
                       {f === 'status' ? (
                         <Select>
                           <Option value="developing">Developing</Option>
@@ -278,7 +426,10 @@ function UserPage() {
                           <Option value="planned">Planned</Option>
                         </Select>
                       ) : f === 'technologies' ? (
-                        <TextArea rows={1} placeholder='Array as JSON: ["React","Node.js"]' />
+                        <TextArea
+                          rows={1}
+                          placeholder='Array as JSON: ["React","Node.js"]'
+                        />
                       ) : f === 'description' ? (
                         <TextArea rows={2} />
                       ) : (
@@ -286,10 +437,35 @@ function UserPage() {
                       )}
                     </Form.Item>
                   ))}
+                  <Form.Item
+                    {...field}
+                    label="Project Image"
+                    name={[field.name, 'image']}
+                    valuePropName="fileList"
+                    getValueFromEvent={e =>
+                      Array.isArray(e) ? e : e?.fileList
+                    }
+                  >
+                    <Upload
+                      listType="picture"
+                      accept="image/*"
+                      beforeUpload={() => false}
+                      maxCount={1}
+                    >
+                      <Button>Upload Project Image</Button>
+                    </Upload>
+                  </Form.Item>
                 </div>
               ))}
               <Form.Item>
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>Add Project</Button>
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  block
+                  icon={<PlusOutlined />}
+                >
+                  Add Project
+                </Button>
               </Form.Item>
             </>
           )}
@@ -301,20 +477,58 @@ function UserPage() {
           {(fields, { add, remove }) => (
             <>
               {fields.map((field, idx) => (
-                <div key={`exp-${field.key}-${idx}`} className="border p-3 mb-3 rounded">
+                <div
+                  key={`exp-${field.key}-${idx}`}
+                  className="border p-3 mb-3 rounded"
+                >
                   <Space align="baseline">
                     <h4>Experience</h4>
                     <MinusCircleOutlined onClick={() => remove(field.name)} />
                   </Space>
-                  {['company','position','location','description','startDate','endDate','current','technologies'].map((f,fIdx) => (
-                    <Form.Item key={`${field.key}-${f}-${fIdx}`} {...field} label={f.charAt(0).toUpperCase()+f.slice(1)} name={[field.name,f]} valuePropName={f==='current'?'checked':undefined}>
-                      {f==='current' ? <Checkbox>Current</Checkbox> : f==='startDate'||f==='endDate' ? <DatePicker /> : f==='technologies' ? <TextArea rows={1} placeholder='Array as JSON: ["React","Node.js"]' /> : f==='description' ? <TextArea rows={2} /> : <Input />}
+                  {[
+                    'company',
+                    'position',
+                    'location',
+                    'description',
+                    'startDate',
+                    'endDate',
+                    'current',
+                    'technologies',
+                  ].map((f, fIdx) => (
+                    <Form.Item
+                      key={`${field.key}-${f}-${fIdx}`}
+                      {...field}
+                      label={f.charAt(0).toUpperCase() + f.slice(1)}
+                      name={[field.name, f]}
+                      valuePropName={f === 'current' ? 'checked' : undefined}
+                    >
+                      {f === 'current' ? (
+                        <Checkbox>Current</Checkbox>
+                      ) : f === 'startDate' || f === 'endDate' ? (
+                        <DatePicker />
+                      ) : f === 'technologies' ? (
+                        <TextArea
+                          rows={1}
+                          placeholder='Array as JSON: ["React","Node.js"]'
+                        />
+                      ) : f === 'description' ? (
+                        <TextArea rows={2} />
+                      ) : (
+                        <Input />
+                      )}
                     </Form.Item>
                   ))}
                 </div>
               ))}
               <Form.Item>
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>Add Experience</Button>
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  block
+                  icon={<PlusOutlined />}
+                >
+                  Add Experience
+                </Button>
               </Form.Item>
             </>
           )}
@@ -326,20 +540,48 @@ function UserPage() {
           {(fields, { add, remove }) => (
             <>
               {fields.map((field, idx) => (
-                <div key={`edu-${field.key}-${idx}`} className="border p-3 mb-3 rounded">
+                <div
+                  key={`edu-${field.key}-${idx}`}
+                  className="border p-3 mb-3 rounded"
+                >
                   <Space align="baseline">
                     <h4>Education</h4>
                     <MinusCircleOutlined onClick={() => remove(field.name)} />
                   </Space>
-                  {['institute','course','description','startDate','endDate','marks'].map((f,fIdx) => (
-                    <Form.Item key={`${field.key}-${f}-${fIdx}`} {...field} label={f.charAt(0).toUpperCase()+f.slice(1)} name={[field.name,f]}>
-                      {f==='description' ? <TextArea rows={2} /> : f==='startDate'||f==='endDate' ? <DatePicker /> : <Input />}
+                  {[
+                    'institute',
+                    'course',
+                    'description',
+                    'startDate',
+                    'endDate',
+                    'marks',
+                  ].map((f, fIdx) => (
+                    <Form.Item
+                      key={`${field.key}-${f}-${fIdx}`}
+                      {...field}
+                      label={f.charAt(0).toUpperCase() + f.slice(1)}
+                      name={[field.name, f]}
+                    >
+                      {f === 'description' ? (
+                        <TextArea rows={2} />
+                      ) : f === 'startDate' || f === 'endDate' ? (
+                        <DatePicker />
+                      ) : (
+                        <Input />
+                      )}
                     </Form.Item>
                   ))}
                 </div>
               ))}
               <Form.Item>
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>Add Education</Button>
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  block
+                  icon={<PlusOutlined />}
+                >
+                  Add Education
+                </Button>
               </Form.Item>
             </>
           )}
@@ -347,27 +589,56 @@ function UserPage() {
 
         {/* Resume / CV */}
         <h2 className="text-xl font-semibold mt-6">Resume / CV</h2>
-        <Form.Item name="resumePdf" valuePropName="fileList" getValueFromEvent={e => (Array.isArray(e) ? e : e?.fileList)}>
-          <Upload accept="application/pdf" beforeUpload={() => false} maxCount={1}>
+        <Form.Item
+          name="resumePdf"
+          valuePropName="fileList"
+          getValueFromEvent={e => (Array.isArray(e) ? e : e?.fileList)}
+        >
+          <Upload
+            accept="application/pdf"
+            beforeUpload={() => false}
+            maxCount={1}
+           
+          >
             <Button>Upload Resume PDF</Button>
           </Upload>
         </Form.Item>
-        <Form.Item name="cvPdf" valuePropName="fileList" getValueFromEvent={e => (Array.isArray(e) ? e : e?.fileList)}>
-          <Upload accept="application/pdf" beforeUpload={() => false} maxCount={1}>
+        
+        <Form.Item
+          name="cvPdf"
+          valuePropName="fileList"
+          getValueFromEvent={e => (Array.isArray(e) ? e : e?.fileList)}
+        >
+          <Upload
+            accept="application/pdf"
+            beforeUpload={() => false}
+            maxCount={1}
+          >
             <Button>Upload CV PDF</Button>
           </Upload>
         </Form.Item>
 
         {/* Profile Image */}
         <h2 className="text-xl font-semibold mt-6">Profile Image</h2>
-        <Form.Item name="image" valuePropName="fileList" getValueFromEvent={e => (Array.isArray(e) ? e : e?.fileList)}>
-          <Upload listType="picture" accept="image/*" beforeUpload={() => false} maxCount={1}>
+        <Form.Item
+          name="image"
+          valuePropName="fileList"
+          getValueFromEvent={e => (Array.isArray(e) ? e : e?.fileList)}
+        >
+          <Upload
+            listType="picture"
+            accept="image/*"
+            beforeUpload={() => false}
+            maxCount={1}
+          >
             <Button>Upload Profile Image</Button>
           </Upload>
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" className="mt-4">Update User</Button>
+          <Button type="primary" htmlType="submit" className="mt-4">
+            Update User
+          </Button>
         </Form.Item>
       </Form>
     </div>

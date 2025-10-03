@@ -25,6 +25,7 @@ const projectSchema = new mongoose.Schema(
     gitLink: { type: String },
     liveLink: { type: String },
     technologies: [{ type: String }],
+    image: { type: String },
     status: {
       type: String,
       enum: ['developing', 'done', 'planned'],
@@ -75,22 +76,31 @@ const educationSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const skillCategorySchema = new mongoose.Schema({
+  category: String,
+  skills: [
+    {
+      type: String,
+    },
+  ],
+  image: { type: String },
+});
+
 const userSchema = new mongoose.Schema(
   {
-    title:{type:String},
+    title: { type: String },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, default: 'user' },
     username: { type: String, required: true, unique: true },
     image: { type: String },
     phone: { type: String },
-    
 
     bio: bioSchema,
     social: [socialSchema],
     resumePdf: { type: String },
     cvPdf: { type: String },
-    skills: { type: mongoose.Schema.Types.Mixed, default: [] },
+    skills: [skillCategorySchema],
     currentStatus: {
       company: { type: String },
       position: { type: String },

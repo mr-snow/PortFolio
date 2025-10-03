@@ -179,28 +179,124 @@ module.exports.deleteUser = async (req, res) => {
 //   }
 // };
 
+// module.exports.updateUser = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const body = { ...req.body };
+
+//     // Parse JSON fields that are sent as strings
+//     [
+//       'bio',
+//       'social',
+//       'skills',
+//       'currentStatus',
+//       'projects',
+//       'experience',
+//       'education',
+//     ].forEach(field => {
+//       if (body[field]) {
+//         try {
+//           body[field] = JSON.parse(body[field]);
+//         } catch (err) {
+//           // Keep original if already object
+//         }
+//       }
+//     });
+
+//     // Handle files
+//     if (req.files) {
+//       if (req.files['image'])
+//         body.image = `images/${req.files['image'][0].filename}`;
+//       if (req.files['resumePdf'])
+//         body.resumePdf = `resume/${req.files['resumePdf'][0].filename}`;
+//       if (req.files['cvPdf'])
+//         body.cvPdf = `cv/${req.files['cvPdf'][0].filename}`;
+//       if (req.files['projectImage']) {
+//         // could be multiple
+//         body.projects = body.projects.map((proj, idx) => ({
+//           ...proj,
+//           image: `images/projectImage/${req.files['projectImage'][idx].filename}`,
+//         }));
+//       }
+//       if (req.files['skillImage']) {
+//         body.skills = body.skills.map((skill, idx) => ({
+//           ...skill,
+//           image: `images/skillimage/${req.files['skillImage'][idx].filename}`,
+//         }));
+//       }
+//     }
+
+//     const response = await userModel.findByIdAndUpdate(
+//       id,
+//       { $set: body },
+//       { new: true }
+//     );
+
+//     return res
+//       .status(200)
+//       .json({ message: 'User updated successfully', data: response });
+//   } catch (error) {
+//     return res
+//       .status(500)
+//       .json({ message: error.message || 'User update failed' });
+//   }
+// };
 
 module.exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const body = { ...req.body };
 
-    // Parse JSON fields that are sent as strings
-    ['bio', 'social', 'skills', 'currentStatus', 'projects', 'experience', 'education'].forEach(field => {
+    // Parse JSON fields
+    [
+      'bio',
+      'social',
+      'skills',
+      'currentStatus',
+      'projects',
+      'experience',
+      'education',
+    ].forEach(field => {
       if (body[field]) {
         try {
           body[field] = JSON.parse(body[field]);
         } catch (err) {
-          // Keep original if already object
+          // already object, ignore
         }
       }
     });
 
     // Handle files
     if (req.files) {
-      if (req.files['image']) body.image = `images/${req.files['image'][0].filename}`;
-      if (req.files['resumePdf']) body.resumePdf = `resume/${req.files['resumePdf'][0].filename}`;
-      if (req.files['cvPdf']) body.cvPdf = `cv/${req.files['cvPdf'][0].filename}`;
+      if (req.files['image']) {
+        body.image = `images/${req.files['image'][0].filename}`;
+      }
+      if (req.files['resumePdf']) {
+        body.resumePdf = `resume/${req.files['resumePdf'][0].filename}`;
+      }
+      if (req.files['cvPdf']) {
+        body.cvPdf = `cv/${req.files['cvPdf'][0].filename}`;
+      }
+
+      // Handle project images
+      if (req.files['projectImage'] && Array.isArray(body.projects)) {
+        body.projects = body.projects.map((proj, idx) => ({
+          ...proj,
+          image: req.files['projectImage'][idx]
+            ? `projectImage/${req.files['projectImage'][idx].filename}`
+            : proj.image,
+        }));
+      }
+
+      // Handle skill images
+      if (req.files['skillImage'] && Array.isArray(body.skills)) {
+        body.skills = body.skills.map((skill, idx) => ({
+          ...skill,
+          image: req.files['skillImage'][idx]
+            ? `skillImage/${req.files['skillImage'][idx].filename}`
+            : skill.image,
+        }));
+      }
     }
 
     const response = await userModel.findByIdAndUpdate(
@@ -209,9 +305,12 @@ module.exports.updateUser = async (req, res) => {
       { new: true }
     );
 
-    return res.status(200).json({ message: 'User updated successfully', data: response });
+    return res
+      .status(200)
+      .json({ message: 'User updated successfully', data: response });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'User update failed' });
+    return res
+      .status(500)
+      .json({ message: error.message || 'User update failed' });
   }
 };
-

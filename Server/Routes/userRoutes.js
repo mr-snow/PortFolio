@@ -28,6 +28,8 @@ const storage = multer.diskStorage({
     if (file.fieldname === 'image') cb(null, 'public/images');
     else if (file.fieldname === 'resumePdf') cb(null, 'public/resume');
     else if (file.fieldname === 'cvPdf') cb(null, 'public/cv');
+    else if (file.fieldname === 'projectImage') cb(null, 'public/projectImage');
+    else if (file.fieldname === 'skillImage') cb(null, 'public/skillImage');
     else cb(null, 'public/others');
   },
   filename: (req, file, cb) => {
@@ -48,6 +50,8 @@ router.patch(
     { name: 'image', maxCount: 1 },
     { name: 'resumePdf', maxCount: 1 },
     { name: 'cvPdf', maxCount: 1 },
+    { name: 'projectImage', maxCount: 5 },
+    { name: 'skillImage', maxCount: 5 },
   ]),
   updateUser
 );
