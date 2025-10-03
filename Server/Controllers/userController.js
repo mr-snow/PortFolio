@@ -1,36 +1,85 @@
 const { default: mongoose } = require('mongoose');
 const userModel = require('../db/models/userModel');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+require('dotenv').config();
+
+// module.exports.createUser = async (req, res) => {
+//   try {
+//     const body = req.body;
+//     const response = await userModel.create(body);
+//     return res
+//       .status(201)
+//       .json({ message: 'user created successful', data: response });
+//   } catch (error) {
+//     return res
+//       .status(500)
+//       .json({ message: error.message || 'user creation Failed' });
+//   }
+// };
 
 module.exports.createUser = async (req, res) => {
   try {
-    const body = req.body;
-    const response = await userModel.create(body);
-    return res
-      .status(201)
-      .json({ message: 'user created successful', data: response });
+    const { email, password, ...rest } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await userModel.create({
+      email,
+      password: hashedPassword,
+      ...rest,
+    });
+
+    return res.status(201).json({
+      message: 'User created successfully',
+      data: { id: user._id, email: user.email },
+    });
   } catch (error) {
     return res
       .status(500)
-      .json({ message: error.message || 'user creation Failed' });
+      .json({ message: error.message || 'User creation failed' });
   }
 };
+
+// module.exports.loginUser = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+//     const response = await userModel.find({ email, password });
+
+//     if (!response || response.length === 0) {
+//       throw new Error('Account not found !');
+//     }
+//     return res
+//       .status(201)
+//       .json({ message: 'user login successful', data: response });
+
+//   } catch (error) {
+//     return res
+//       .status(500)
+//       .json({ message: error.message || 'user login Failed' });
+//   }
+// };
 
 module.exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const response = await userModel.find({ email, password });
-
-    if (!response || response.length === 0) {
-      throw new Error('Account not found !');
-    }
-    return res
-      .status(201)
-      .json({ message: 'user login successful', data: response });
+    const user = await userModel.findOne({ email });
+    if (!user) throw new Error('Account not found');
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) throw new Error('Invalid credentials');
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    return res.status(200).json({
+      message: 'User login successful',
+      data: { id: user._id, email: user.email },
+      token: token,
+    });
   } catch (error) {
     return res
       .status(500)
-      .json({ message: error.message || 'user login Failed' });
+      .json({ message: error.message || 'User login failed' });
   }
 };
 

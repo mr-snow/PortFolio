@@ -10,17 +10,21 @@ function UserLogin() {
   const [form] = Form.useForm();
   const [contextHolder, messageApi] = message.useMessage();
   const navigate = useNavigate();
-  const { setUserId } = authStore();
+  const { setUserId, setToken } = authStore();
 
   const { mutate: userLogin } = useMutation({
     mutationFn: async data => {
       const response = await userLoginHook(data, login);
-      return response?.data?.data;
+      return response?.data;
     },
     onSuccess: data => {
-      const id = data[0]?._id;
-      setUserId(id);
-      navigate('/user/dashboard');
+      setToken(data?.token);
+      setUserId(data?.data?.id);
+      if (login) {
+        navigate('/user/dashboard');
+      } else {
+        setLogin(true);
+      }
     },
     onError: error => {
       console.log('onError', error.message);

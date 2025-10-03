@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getUserHook } from '../../Hooks/userHook';
 import authStore from '../../Store/authStore';
 import emailjs from '@emailjs/browser';
+import axios from 'axios';
 import { FaGithub, FaLinkedin, FaEnvelope, FaPhone } from 'react-icons/fa';
 
 function Home() {
@@ -23,6 +24,14 @@ function Home() {
     },
     enabled: userId && isValidObjectId(userId),
   });
+
+  useEffect(() => {
+    axios
+      .post(`${import.meta.env.VITE_BACKEND_API}/api/visits/track`, {
+        page: 'User.jsx',
+      })
+      .catch(err => console.error('Tracking error:', err));
+  }, []);
 
   if (isLoading) return <div className="p-4">Loading...</div>;
   if (isError || !user) return <div className="p-4">User not found</div>;
