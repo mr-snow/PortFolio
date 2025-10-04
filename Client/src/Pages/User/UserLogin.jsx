@@ -8,7 +8,7 @@ import authStore from '../../Store/authStore';
 function UserLogin() {
   const [login, setLogin] = useState(true);
   const [form] = Form.useForm();
-  const [contextHolder, messageApi] = message.useMessage();
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const { setUserId, setToken } = authStore();
 
@@ -18,21 +18,27 @@ function UserLogin() {
       return response?.data;
     },
     onSuccess: data => {
+    
+
       setToken(data?.token);
       setUserId(data?.data?.id);
       if (login) {
+        messageApi.success('Login successful');
+
         navigate('/user/dashboard');
       } else {
         setLogin(true);
+        messageApi.success('User SignUP successful , Please Login ');
       }
     },
     onError: error => {
-      console.log('onError', error.message);
+      messageApi.error(error?.response?.data?.message || error.message);
+   
     },
   });
 
   const onFinish = async data => {
-    console.log('form data ', data);
+
     userLogin(data);
   };
 
@@ -42,7 +48,8 @@ function UserLogin() {
 
   return (
     <div className="bg-green-30 h-screen w-screen flex justify-center items-center">
-      {/* {contextHolder} */}
+      {contextHolder}
+
       <Form
         className="shadow-2xl !p-5 flex justify-center gap-2"
         layout="inline"

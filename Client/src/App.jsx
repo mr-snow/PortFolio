@@ -4,13 +4,15 @@ import { Routes, Route } from 'react-router-dom';
 
 import Home from './Pages/User/Home';
 import { useTheme } from './Context/themContext';
-import ProtectedRoute from './Pages/Admin/ProtectedRoute.jsx';
+import ProtectedRoute from './Pages/User/ProtectedRoute.jsx';
 import Result404 from './Pages/Result404.jsx';
 
-const VisitorView = lazy(() => import('./Pages/Admin/VistorView'));
-
+const VisitorView = lazy(() => import('./Pages/User/VistorView.jsx'));
 const UserPage = lazy(() => import('./Pages/User/UserPage'));
 const User = lazy(() => import('./Pages/User/UserLogin'));
+const AdminVisitorView = lazy(() =>
+  import('./Pages/Admin/AdminVisitorView.jsx')
+);
 
 function App() {
   const { theme } = useTheme();
@@ -22,7 +24,8 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/vistor" element={<VisitorView />} />
+        <Route path="/:id" element={<Home />} />
+        <Route path="/:id/visitors" element={<VisitorView />} />
         <Route
           path="/user"
           element={
@@ -53,24 +56,39 @@ function App() {
             </Suspense>
           }
         />
-
         <Route
-          path="/visitors"
+          path="/:id/visitors"
           element={
             <Suspense
               fallback={
-                <div className="w-screen h-screen flex   justify-center items-center bg-black text-white">
+                <div className="w-screen h-screen flex justify-center items-center bg-black text-white">
                   <p>Loading..</p>
                 </div>
               }
             >
               <ProtectedRoute>
-                <VisitorView />
+                <VisitorView /> {/* Normal user */}
               </ProtectedRoute>
             </Suspense>
           }
         />
-
+        // Admin Visitor View
+        <Route
+          path="/admin/visitors"
+          element={
+            <Suspense
+              fallback={
+                <div className="w-screen h-screen flex justify-center items-center bg-black text-white">
+                  <p>Loading..</p>
+                </div>
+              }
+            >
+              <ProtectedRoute>
+                <AdminVisitorView /> {/* Admin page */}
+              </ProtectedRoute>
+            </Suspense>
+          }
+        />
         <Route path="*" element={<Result404 />} />
       </Routes>
     </>

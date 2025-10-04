@@ -4,11 +4,25 @@ import { getUserHook } from '../../Hooks/userHook';
 import authStore from '../../Store/authStore';
 import emailjs from '@emailjs/browser';
 import axios from 'axios';
-import { FaGithub, FaLinkedin, FaEnvelope, FaPhone } from 'react-icons/fa';
+import {
+  FaGithub,
+  FaLinkedin,
+  FaEnvelope,
+  FaPhone,
+  FaHome,
+} from 'react-icons/fa';
+import { FloatButton } from 'antd';
+import { useNavigate, useParams } from 'react-router-dom';
 
 function Home() {
-  const { userId } = authStore();
+  const { userId: loggedInUserId } = authStore();
+  const { id: routeUserId } = useParams();
+
+  const userId =
+    routeUserId|| import.meta.env.VITE_DEFAULT_USER_ID || loggedInUserId 
+
   const contactFormRef = useRef();
+  const navigate = useNavigate();
 
   const isValidObjectId = id => /^[0-9a-fA-F]{24}$/.test(id);
 
@@ -26,12 +40,15 @@ function Home() {
   });
 
   useEffect(() => {
+    if (!userId) return;
+
     axios
       .post(`${import.meta.env.VITE_BACKEND_API}/api/visits/track`, {
-        page: 'User.jsx',
+        userId,
+        page: 'Home Page',
       })
       .catch(err => console.error('Tracking error:', err));
-  }, []);
+  }, [userId]);
 
   if (isLoading) return <div className="p-4">Loading...</div>;
   if (isError || !user) return <div className="p-4">User not found</div>;
@@ -94,6 +111,16 @@ function Home() {
             {sec.charAt(0).toUpperCase() + sec.slice(1)}
           </button>
         ))}
+
+        {userId && (
+          <FloatButton
+            shape="circle"
+            type="primary"
+            style={{ insetInlineEnd: 25 }}
+            icon={<FaHome />}
+            onClick={() => navigate(-1)}
+          />
+        )}
       </nav>
 
       <main className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6 p-4 pt-16">
@@ -337,10 +364,6 @@ function Home() {
             {user.projects.map((proj, idx) => (
               <div
                 key={idx}
-                onClick={() => {
-                  // Placeholder for future navigation
-                  console.log(`Clicked on project: ${proj.title}`);
-                }}
                 className="bg-gray-800 rounded overflow-hidden flex flex-col shadow hover:shadow-lg transition cursor-pointer hover:-translate-y-1 transform"
                 title="Click to view project"
               >

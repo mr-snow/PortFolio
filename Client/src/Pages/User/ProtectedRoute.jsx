@@ -32,7 +32,7 @@ const ProtectedRoute = ({ children }) => {
   }, [token]);
 
   if (loading) return <div>Checking access...</div>;
-  if (!isValid) return <Navigate to="/404" replace />;
+  if (!isValid) return <Navigate to="/user" replace />;
 
   return children;
 };

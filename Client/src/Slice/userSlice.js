@@ -25,7 +25,6 @@ export const deleteUserApi = async id => {
   return response;
 };
 export const updateUserApi = async (postData, userId) => {
-  console.log('postdata', postData);
   const response = await axiosInstance.patch(`/api/user/${userId}`, postData);
   return response;
 };

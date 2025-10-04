@@ -5,19 +5,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 
-// module.exports.createUser = async (req, res) => {
-//   try {
-//     const body = req.body;
-//     const response = await userModel.create(body);
-//     return res
-//       .status(201)
-//       .json({ message: 'user created successful', data: response });
-//   } catch (error) {
-//     return res
-//       .status(500)
-//       .json({ message: error.message || 'user creation Failed' });
-//   }
-// };
+
 
 module.exports.createUser = async (req, res) => {
   try {

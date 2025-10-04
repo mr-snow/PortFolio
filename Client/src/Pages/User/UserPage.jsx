@@ -63,6 +63,14 @@ function UserPage() {
     onError: err => messageApi.error(err.message || 'Delete failed'),
   });
 
+  const goHome = () => {
+    if (userId) {
+      navigate(`/${userId}`);
+    } else {
+      navigate('/');
+    }
+  };
+
   // Redirect if no userId
   useEffect(() => {
     if (!userId) navigate('/user');
@@ -260,6 +268,10 @@ function UserPage() {
         <Button danger onClick={() => deleteUser(userId)}>
           Delete User
         </Button>
+
+        <Button type="primary" onClick={() => goHome()}>
+          View
+        </Button>
       </div>
 
       <Form form={form} layout="vertical" onFinish={onFinish}>
@@ -368,7 +380,6 @@ function UserPage() {
                       {...catField}
                       label="Category"
                       name={[catField.name, 'category']}
-                      rules={[{ required: true, message: 'Category required' }]}
                     >
                       <Input placeholder="Frontend, Backend..." />
                     </Form.Item>
@@ -402,13 +413,7 @@ function UserPage() {
                             key={`skill-${skillField.key}-${skillIdx}`}
                             align="baseline"
                           >
-                            <Form.Item
-                              {...skillField}
-                              name={[skillField.name]}
-                              rules={[
-                                { required: true, message: 'Skill required' },
-                              ]}
-                            >
+                            <Form.Item {...skillField} name={[skillField.name]}>
                               <Input placeholder="Skill name" />
                             </Form.Item>
                             <MinusCircleOutlined
