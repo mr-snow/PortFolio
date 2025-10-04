@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 mongoose
-  .connect('mongodb://localhost:27017/portfolio')
+  .connect(process.env.MONGO_URI)
   .then(() => {
     console.log('db conntected');
   })
