@@ -37,7 +37,6 @@ const AdminVisitorView = () => {
 
   // --- Delete single visitor ---
   const deleteVisitor = async visitorId => {
-    if (!window.confirm('Delete this visitor?')) return;
     try {
       await axios.delete(`${backendUrl}/api/visits/${adminId}/${visitorId}`);
       messageApi.success('Visitor deleted');
@@ -50,7 +49,6 @@ const AdminVisitorView = () => {
 
   // --- Delete all visitors ---
   const deleteAllVisitors = async () => {
-    if (!window.confirm('Delete ALL visitors?')) return;
     try {
       await axios.delete(`${backendUrl}/api/visits/${adminId}`);
       messageApi.success('All visitors deleted');
@@ -136,7 +134,7 @@ const AdminVisitorView = () => {
       <FloatButton
         shape="circle"
         type="primary"
-        style={{ insetInlineEnd: 25,insetBlockEnd:20 }}
+        style={{ insetInlineEnd: 25, insetBlockEnd: 20 }}
         icon={<FaHome />}
         onClick={() => navigate(-1)}
       />
