@@ -2,7 +2,19 @@ const mongoose = require('mongoose');
 
 const socialSchema = new mongoose.Schema(
   {
-    platform: { type: String, required: true, unique: true },
+    platform: {
+      type: String,
+      required: true,
+      enum: [
+        'linkedin',
+        'github',
+        'youtube',
+        'gmail',
+        'mail',
+        'phone',
+        'website',
+      ],
+    },
     link: { type: String, required: true },
   },
   { _id: false }
@@ -105,6 +117,8 @@ const userSchema = new mongoose.Schema(
     username: { type: String, unique: true },
     image: { type: String },
     phone: { type: String },
+    portfolioLink: { type: String },
+    notes: { type: String },
 
     bio: bioSchema,
     social: [socialSchema],
@@ -114,7 +128,7 @@ const userSchema = new mongoose.Schema(
     currentStatus: {
       company: { type: String },
       position: { type: String },
-      asPresent: { type: Boolean, default: true },
+      asPresent: { type: Boolean, default: false },
     },
     approval: {
       type: String,

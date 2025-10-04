@@ -175,6 +175,10 @@ module.exports.updateUser = async (req, res) => {
       }
     });
 
+    if (body.notes && typeof body.notes === 'string') {
+      body.notes = body.notes.trim();
+    }
+
     // Helper to merge images with existing user data
     const mergeImages = (newArray, existingArray) => {
       if (!Array.isArray(newArray)) return existingArray || [];

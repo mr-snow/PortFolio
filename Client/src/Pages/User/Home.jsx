@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getUserHook } from '../../Hooks/userHook';
 import authStore from '../../Store/authStore';
@@ -11,8 +11,13 @@ import {
   FaPhone,
   FaHome,
   FaUser,
+  FaPen,
+  FaYoutube,
+  FaGlobe,
+  FaFileDownload,
 } from 'react-icons/fa';
-import { FloatButton } from 'antd';
+import { FaRegShareFromSquare, FaNoteSticky } from 'react-icons/fa6';
+import { FloatButton, message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 
 function Home() {
@@ -22,9 +27,11 @@ function Home() {
   const userId =
     routeUserId || import.meta.env.VITE_DEFAULT_USER_ID || loggedInUserId;
 
+  const [messageApi, contextHolder] = message.useMessage();
   const contactFormRef = useRef();
+  const subjectRef = useRef();
   const navigate = useNavigate();
-
+  const [emailSent, setEmailSent] = useState(false);
   const isValidObjectId = id => /^[0-9a-fA-F]{24}$/.test(id);
 
   const {
@@ -54,35 +61,211 @@ function Home() {
   if (isLoading) return <div className="p-4">Loading...</div>;
   if (isError || !user) return <div className="p-4">User not found</div>;
 
-  const backendUrl =
-    import.meta.env.VITE_BACKEND_API || 'http://localhost:5000';
-  const getFileUrl = filePath => `${backendUrl}/public/${filePath}`;
-
-  const getDownloadUrl = filePath => {
-    const fileName = filePath.split('/').pop(); // get only the filename
-    const type = filePath.includes('resume') ? 'resume' : 'cv';
-    return `${backendUrl}/download/${type}/${fileName}`;
-  };
-
   const sendEmail = e => {
     e.preventDefault();
+
+    let prefix = 'New message ';
+    if (user.approval === 'pending') prefix = 'Pending Request: ';
+    if (user.approval === 'failed') prefix = 'Approval Request: ';
+
+    if (subjectRef.current) {
+      subjectRef.current.value = `${prefix}`;
+    }
+
     emailjs
       .sendForm(
         import.meta.env.VITE_EMAILJS_SERVICE,
         import.meta.env.VITE_EMAILJS_TEMPLATE,
         contactFormRef.current,
-        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY,
+        {
+          subject: `${prefix}`,
+        }
       )
-      .then(() => alert('Email sent successfully!'))
-      .catch(() => alert('Failed to send email.'));
+      .then(() => {
+        messageApi.success('Email sent successfully!');
+        setEmailSent(true);
+      })
+      .catch(() => messageApi.error('Failed to send email.'));
     e.target.reset();
   };
 
-  const socialIcons = {
-    linked: <FaLinkedin />,
-    git: <FaGithub />,
-    mail: <FaEnvelope />,
-    ph: <FaPhone />,
+  const isRouteWithId = !!routeUserId;
+
+  if (isRouteWithId) {
+    switch (user.approval) {
+      case 'pending':
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-gray-100 p-4">
+            <h2 className="text-2xl font-bold mb-4">
+              Admin approval pending. Please contact admin for access.
+            </h2>
+
+            <div className="bg-gray-800 p-4 rounded mt-4 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-2 text-center">
+                Contact Admin
+              </h3>
+              {contextHolder}
+
+              {!emailSent ? (
+                <form
+                  ref={contactFormRef}
+                  onSubmit={sendEmail}
+                  className="flex flex-col gap-3"
+                >
+                  <input
+                    type="hidden"
+                    name="subject"
+                    value=""
+                    ref={subjectRef}
+                  />
+                  <input
+                    type="text"
+                    name="from_name"
+                    placeholder="Your name"
+                    required
+                    className="p-2 rounded bg-gray-700"
+                  />
+                  <input
+                    type="email"
+                    name="reply_to"
+                    placeholder="Your email"
+                    required
+                    className="p-2 rounded bg-gray-700"
+                  />
+                  <textarea
+                    name="message"
+                    rows="4"
+                    placeholder="Your message"
+                    required
+                    className="p-2 rounded bg-gray-700"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600 transition"
+                  >
+                    Send
+                  </button>
+                  <a
+                    href={`https://mail.google.com/mail/?view=cm&fs=1&to=${
+                      import.meta.env.VITE_ADMIN_EMAIL
+                    }&su=Pending Request | ProtFolio  &body=Hi  ,`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 text-center bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600 transition"
+                  >
+                    Email Me Directly
+                  </a>
+                </form>
+              ) : (
+                <div className="text-center bg-gray-700 p-6 rounded-lg">
+                  <h4 className="text-xl font-bold text-teal-400 mb-2">
+                    ✅ Email Sent Successfully!
+                  </h4>
+                  <p className="text-gray-300">
+                    Thank you for reaching out. Your request has been received.
+                    <br />
+                    Please wait for admin approval — we’ll reply as soon as
+                    possible.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'failed':
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-gray-100 p-4">
+            <h2 className="text-2xl font-bold mb-4">
+              Approval failed. Please contact admin.
+            </h2>
+
+            <div className="bg-gray-800 p-4 rounded mt-4 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-2 text-center">
+                Contact Admin
+              </h3>
+              {contextHolder}
+
+              {!emailSent ? (
+                <form
+                  ref={contactFormRef}
+                  onSubmit={sendEmail}
+                  className="flex flex-col gap-3"
+                >
+                  <input
+                    type="hidden"
+                    name="subject"
+                    value=""
+                    ref={subjectRef}
+                  />
+                  <input
+                    type="text"
+                    name="from_name"
+                    placeholder="Your name"
+                    required
+                    className="p-2 rounded bg-gray-700"
+                  />
+                  <input
+                    type="email"
+                    name="reply_to"
+                    placeholder="Your email"
+                    required
+                    className="p-2 rounded bg-gray-700"
+                  />
+                  <textarea
+                    name="message"
+                    rows="4"
+                    placeholder="Your message"
+                    required
+                    className="p-2 rounded bg-gray-700"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600 transition"
+                  >
+                    Send
+                  </button>
+                  <a
+                    href={`https://mail.google.com/mail/?view=cm&fs=1&to=${
+                      import.meta.env.VITE_ADMIN_EMAIL
+                    }&su=Approval Request | ProtFolio   &body=Hi  ,`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 text-center bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600 transition"
+                  >
+                    Email Me Directly
+                  </a>
+                </form>
+              ) : (
+                <div className="text-center bg-gray-700 p-6 rounded-lg">
+                  <h4 className="text-xl font-bold text-teal-400 mb-2">
+                    ✅ Email Sent Successfully!
+                  </h4>
+                  <p className="text-gray-300">
+                    Thank you for contacting us. Your message has been sent.
+                    <br />
+                    Please wait for admin response — we’ll get back to you soon.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'approval':
+      default:
+        break;
+    }
+  }
+
+  const backendUrl =
+    import.meta.env.VITE_BACKEND_API || 'http://localhost:5000';
+  const getFileUrl = filePath => `${backendUrl}/public/${filePath}`;
+  const getDownloadUrl = filePath => {
+    const fileName = filePath.split('/').pop();
+    const type = filePath.includes('resume') ? 'resume' : 'cv';
+    return `${backendUrl}/download/${type}/${fileName}`;
   };
 
   const statusText = user.currentStatus?.asPresent ? 'Working' : 'Open to work';
@@ -92,10 +275,10 @@ function Home() {
     if (section) section.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // --- Main JSX ---
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 font-sans">
-      {/* Navbar */}
-      <nav className="fixed top-0 right-5 w-full bg-gray-900 bg-opacity-95 shadow z-50 flex justify-end gap-6 p-2 text-sm md:text-base">
+      <nav className="flex-1 flex  top-0 right-0 w-full bg-gray-900 h-flex-1  bg-opacity-95 shadow z-50 flex-wrap sm:flex-row pt-4  justify-center sm:justify-end  gap-3 sm:gap-6  p-2 text-sm md:text-base sm:pr-20">
         {[
           'about',
           'skills',
@@ -112,6 +295,16 @@ function Home() {
             {sec.charAt(0).toUpperCase() + sec.slice(1)}
           </button>
         ))}
+
+        {userId && (
+          <FloatButton
+            shape="circle"
+            type="primary"
+            style={{ insetInlineEnd: 25, insetBlockEnd: 120 }}
+            icon={<FaPen />}
+            onClick={() => navigate('/user/dashboard')}
+          />
+        )}
 
         <FloatButton
           shape="circle"
@@ -130,9 +323,10 @@ function Home() {
         />
       </nav>
 
-      <main className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6 p-4 pt-16">
-        {/* Left column: Profile + Contact + Email form */}
-        <section className="md:col-span-1 flex flex-col gap-4">
+      <main className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6 p-4 pt-3 ">
+        {/* Left column */}
+        <section className="md:col-span-1 flex flex-col gap-3 ">
+          {contextHolder}
           <div className="bg-gray-900 p-6 rounded-xl flex flex-col items-center text-center">
             <img
               src={
@@ -143,12 +337,14 @@ function Home() {
               alt="Profile"
               className="w-32 h-32 rounded-xl mb-4 object-cover"
             />
-            <h2 className="text-xl font-bold">{user.bio?.name}</h2>
-            <p className="text-gray-400">{user.bio?.summary}</p>
+            <h2 className="text-xl font-bold">{user.bio?.name} </h2>
+
             <p className="mt-2 text-gray-400">{user.title}</p>
 
-            {/* Contact Info */}
-            <div className="bg-gray-800 p-4 rounded mt-4 w-full text-left">
+            <div
+              className="bg-gray-800 p-4 rounded text-sm mt-4 w-full flex flex-col sm:justify-center sm:items-center  sm:text-left "
+              id="contact"
+            >
               <h3 className="text-lg font-semibold mb-2">Contact</h3>
               <p>
                 Email:{' '}
@@ -156,54 +352,90 @@ function Home() {
                   {user.email}
                 </a>
               </p>
-              <p>Location: {user.bio?.currentLocation || 'N/A'}</p>
+
+              {user?.bio?.currentLocation && (
+                <p className=''>Current Location: {user.bio?.currentLocation || 'N/A'}</p>
+              )}
+
               <p>Status: {statusText}</p>
 
-              {/* Social Icons */}
-              <div className="flex gap-3 mt-3">
-                {user.social?.map(s => {
-                  const platform = s.platform.toLowerCase();
-                  if (!socialIcons[platform] || !s.link) return null;
-                  const href =
-                    platform === 'mail' && !s.link.startsWith('mailto:')
-                      ? `mailto:${s.link}`
-                      : platform === 'ph'
-                      ? `tel:${s.link}`
-                      : s.link.startsWith('http')
-                      ? s.link
-                      : `https://${s.link}`;
+              {/* ✅ Updated Social Icons Section */}
+              <div className="flex gap-3 sm:gap-2 mt-3 flex-wrap justify-center   sm:justify-start ">
+                {user.social?.map((s, idx) => {
+                  const platform = s.platform?.toLowerCase() || '';
+                  const link = s.link?.trim() || '';
+                  if (!link) return null;
+
+                  const iconMap = {
+                    linkedin: <FaLinkedin />,
+                    github: <FaGithub />,
+                    youtube: <FaYoutube />,
+                    mail: <FaEnvelope />,
+                    gmail: <FaEnvelope />,
+                    phone: <FaPhone />,
+                    website: <FaGlobe />,
+                  };
+
+                  const icon = iconMap[platform];
+                  if (!icon) return null;
+
+                  let href = link;
+                  if (platform === 'mail' || platform === 'gmail') {
+                    href = link.startsWith('mailto:') ? link : `mailto:${link}`;
+                  } else if (platform === 'phone') {
+                    href = link.startsWith('tel:') ? link : `tel:${link}`;
+                  } else if (!link.startsWith('http')) {
+                    href = `https://${link}`;
+                  }
+
                   return (
                     <a
-                      key={platform}
+                      key={idx}
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-10 h-10 flex items-center justify-center bg-gray-700 rounded hover:bg-teal-500 transition"
                       title={platform}
                     >
-                      {socialIcons[platform]}
+                      {icon}
                     </a>
                   );
                 })}
+
+                {user.portfolioLink && (
+                  <button
+                    onClick={() =>
+                      navigator.share
+                        ? navigator.share({
+                            title: `${user.username}'s Portfolio`,
+                            url: user.portfolioLink,
+                          })
+                        : window.open(user.portfolioLink, '_blank')
+                    }
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                  >
+                    <FaRegShareFromSquare />
+                  </button>
+                )}
               </div>
 
-              {/* Resume / CV download */}
-              <div className="mt-4 flex flex-col gap-2">
+              <div className="mt-4 flex  gap-2 justify-center items-center">
                 {user.resumePdf && (
                   <a
                     href={getDownloadUrl(user.resumePdf)}
-                    className="px-4 py-2 bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600"
+                    className="px-4 py-2 bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600  flex flex-wrap justify-around items-center flex-none "
                   >
-                    Download Resume
+                    <FaFileDownload size={'1.5rem'} />
+                    Resume
                   </a>
                 )}
-
                 {user.cvPdf && (
                   <a
                     href={getDownloadUrl(user.cvPdf)}
-                    className="px-4 py-2 bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600"
+                    className="px-4 py-2 bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600  flex flex-wrap justify-around items-center flex-none "
                   >
-                    Download CV
+                    <FaFileDownload size={'1.5rem'} />
+                    CV
                   </a>
                 )}
               </div>
@@ -244,12 +476,6 @@ function Home() {
                 >
                   Send
                 </button>
-                {/* <a
-                  href={`mailto:${user.email}?subject=Hello ${user.bio?.name}&body=Hi ${user.bio?.name},`}
-                  className="px-4 py-2 bg-teal-500 text-gray-900 rounded font-semibold hover:bg-teal-600 transition"
-                >
-                  Email Me Directly
-                </a> */}
                 <a
                   href={`https://mail.google.com/mail/?view=cm&fs=1&to=${user.email}&su=Portfolio visitor  &body=Hi ${user.bio?.name} ,`}
                   target="_blank"
@@ -260,11 +486,45 @@ function Home() {
                 </a>
               </form>
             </div>
+
+            {user.notes && (
+              <div
+                id="notes"
+                className="max-w-4xl mx-auto bg-gradient-to-br from-gray-800 to-gray-900 border-l-4 border-teal-500 p-6 rounded-xl mt-8 shadow-lg"
+              >
+                <h3 className="text-xl font-bold mb-3 text-teal-400 flex items-center gap-2">
+                  <FaNoteSticky /> Note
+                </h3>
+                <p className="text-gray-300 leading-relaxed tex-sm">
+                  {user.notes ||
+                    'If you’re interested in hiring me as a developer, you can contact me using the email above. Also, if anyone is interested in this portfolio, feel free to message me — I’ll make sure to reply!'}
+                </p>
+              </div>
+            )}
+
+            {user.notes && (
+              <div
+                id="notes"
+                className="max-w-4xl mx-auto bg-gradient-to-br from-gray-800 to-gray-900 border-l-4 border-teal-500 p-6 rounded-xl mt-8 shadow-lg"
+              >
+                <h3 className="text-xl font-bold mb-3 text-teal-400 flex items-center gap-2">
+                  <FaNoteSticky /> Short Bio
+                </h3>
+                <p className="text-gray-300 leading-relaxed tex-sm">
+                  {user?.bio?.summary && <p> {user.bio?.summary}</p>}
+                </p>
+
+                <div className="  text-left">
+                  <p>Origin: {user.bio?.location || 'N/A'}</p>
+                  <p>Current: {user.bio?.currentLocation || 'N/A'}</p>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
         {/* Right column: About, Skills, Experience, Education */}
-        <section className="md:col-span-2 flex flex-col gap-6">
+        <section className="md:col-span-2 flex flex-col gap-5 ">
           {/* About */}
           <div className="bg-gray-900 p-6 rounded-xl" id="about">
             <h3 className="text-xl font-bold mb-2">About Me</h3>
@@ -359,8 +619,7 @@ function Home() {
         </section>
       </main>
 
-      {/* Projects - Full Width Grid */}
-      {/* Projects - Full Width Grid */}
+      {/* Projects */}
       {user.projects?.length > 0 && (
         <div
           className="max-w-full p-6 mt-6 bg-gray-900 rounded-xl"
@@ -394,7 +653,7 @@ function Home() {
                         target="_blank"
                         rel="noreferrer"
                         className="text-teal-400 text-sm hover:underline"
-                        onClick={e => e.stopPropagation()} // so click on GitHub doesn't trigger card click
+                        onClick={e => e.stopPropagation()}
                       >
                         GitHub
                       </a>
@@ -409,7 +668,7 @@ function Home() {
                         target="_blank"
                         rel="noreferrer"
                         className="text-teal-400 text-sm hover:underline"
-                        onClick={e => e.stopPropagation()} // so click on Live link doesn't trigger card click
+                        onClick={e => e.stopPropagation()}
                       >
                         Live
                       </a>
@@ -422,7 +681,7 @@ function Home() {
         </div>
       )}
 
-      {/* Certificates Section */}
+      {/* Certificates */}
       {user.certificates?.length > 0 && (
         <div className="bg-gray-900 p-6 rounded-xl w-full" id="certificates">
           <h3 className="text-xl font-bold mb-4 text-center">Certificates</h3>

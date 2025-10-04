@@ -9,7 +9,10 @@ import {
   Select,
   DatePicker,
   Checkbox,
+  InputNumber,
 } from 'antd';
+import { CiLogout } from 'react-icons/ci';
+import { GrView } from 'react-icons/gr';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -20,6 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import authStore from '../../Store/authStore';
 import dayjs from 'dayjs';
+import { FaHome } from 'react-icons/fa';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -28,10 +32,11 @@ function UserPage() {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { userId, removeUserId } = authStore();
+  const { userId, removeUserId, removeToken } = authStore();
   const [messageApi, contextHolder] = message.useMessage();
 
   const adminId = import.meta.env.VITE_DEFAULT_USER_ID;
+  const frontendBaseUrl = import.meta.env.VITE_FRONTEND_API;
 
   const isAdmin = userId === adminId;
 
@@ -118,6 +123,10 @@ function UserPage() {
         ];
       };
 
+      const portfolioLink = user.portfolioLink
+        ? user.portfolioLink
+        : `${frontendBaseUrl}/${userId}`;
+
       form.setFieldsValue({
         bio: user.bio || {},
         phone: user.phone,
@@ -126,6 +135,8 @@ function UserPage() {
         title: user.title,
         role: user.role,
         social: user.social?.length ? user.social : [],
+        portfolioLink,
+        notes: user?.notes,
 
         // ✅ skills: each category with mapped image
         skills: user.skills?.length
@@ -204,11 +215,18 @@ function UserPage() {
     });
 
     // handle simple fields
-    ['email', 'title', 'username', 'role', 'phone', 'password'].forEach(
-      field => {
-        if (values[field]) formData.append(field, values[field]);
-      }
-    );
+    [
+      'email',
+      'title',
+      'username',
+      'role',
+      'phone',
+      'password',
+      'portfolioLink',
+      'notes',
+    ].forEach(field => {
+      if (values[field]) formData.append(field, values[field]);
+    });
 
     // handle nested json
     ['bio', 'social', 'currentStatus', 'experience', 'education'].forEach(
@@ -267,30 +285,67 @@ function UserPage() {
   return (
     <div className="p-4 w-screen h-screen overflow-y-auto bg-gray-100">
       {contextHolder}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">User Panel</h1>
-        <Button danger onClick={() => deleteUser(userId)}>
-          Delete User
-        </Button>
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
+        <h1 className="text-2xl font-bold w-full sm:w-auto">User Panel</h1>
 
-        <Button
-          type="primary"
-          onClick={() => {
-            if (isAdmin) {
-              navigate(`/admin/visitors`);
-            } else {
-              navigate(`/${userId}/visitors`);
-            }
-          }}
-        >
-          Visitors
-        </Button>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button danger onClick={() => deleteUser(userId)}>
+            Delete User
+          </Button>
 
-        <Button type="primary" onClick={() => goHome()}>
-          View
-        </Button>
+          <Button
+            type="default"
+            icon={<CiLogout />}
+            onClick={() => {
+              removeUserId();
+              removeToken();
+              navigate('/');
+            }}
+          >
+            Logout
+          </Button>
 
-  
+          <Button
+            type="primary"
+            icon={<GrView />}
+            onClick={() => {
+              if (isAdmin) {
+                navigate(`/admin/visitors`);
+              } else {
+                navigate(`/${userId}/visitors`);
+              }
+            }}
+          >
+            Visitors
+          </Button>
+
+          {user?.portfolioLink ? (
+            <Button
+              type="primary"
+              icon={<FaHome />}
+              className="transition"
+              onClick={() => {
+                const link = user.portfolioLink.startsWith('http')
+                  ? user.portfolioLink
+                  : `https://${user.portfolioLink}`;
+                window.location.href = link; // open in same tab
+              }}
+            >
+              Website
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              icon={<FaHome />}
+              className="transition"
+              onClick={() => {
+                navigate(`/${userId}`);
+              }}
+            >
+              Website
+            </Button>
+          )}
+        </div>
       </div>
 
       <Form form={form} layout="vertical" onFinish={onFinish}>
@@ -319,6 +374,14 @@ function UserPage() {
         <Form.Item label="Role" name="role">
           <Input />
         </Form.Item>
+        <Form.Item label="Portfolio / Deploy Link" name="portfolioLink">
+          <Input placeholder="https://your-portfolio.com" />
+        </Form.Item>
+
+        <Form.Item label="Notes" name="notes">
+          <Input placeholder="Notes " />
+        </Form.Item>
+
         <Form.Item label="Password" name="password">
           <Input.Password placeholder="Enter new password" />
         </Form.Item>
@@ -328,9 +391,15 @@ function UserPage() {
         <Form.Item label="Name" name={['bio', 'name']}>
           <Input />
         </Form.Item>
-        <Form.Item label="Age" name={['bio', 'age']}>
-          <Input type="number" />
+
+        <Form.Item
+          label="Age"
+          name={['bio', 'age']}
+          rules={[{ type: 'number', min: 0 }]}
+        >
+          <InputNumber style={{ width: '100%' }} placeholder="Enter your age" />
         </Form.Item>
+
         <Form.Item label="Current Location" name={['bio', 'currentLocation']}>
           <Input />
         </Form.Item>
@@ -350,26 +419,44 @@ function UserPage() {
           {(fields, { add, remove }) => (
             <>
               {fields.map((field, idx) => (
-                <Space key={`social-${field.key}-${idx}`} align="baseline">
+                <Space
+                  key={`social-${field.key}-${idx}`}
+                  align="baseline"
+                  className="flex-wrap"
+                >
                   <Form.Item
                     {...field}
                     label="Platform"
                     name={[field.name, 'platform']}
-                    rules={[{ required: true }]}
+                    rules={[{ required: true, message: 'Select a platform' }]}
                   >
-                    <Input placeholder="e.g., LinkedIn" />
+                    <Select
+                      placeholder="Select platform"
+                      style={{ minWidth: 150 }}
+                    >
+                      <Option value="linkedin">LinkedIn</Option>
+                      <Option value="github">GitHub</Option>
+                      <Option value="youtube">YouTube</Option>
+                      <Option value="gmail">Gmail</Option>
+                      <Option value="mail">Mail</Option>
+                      <Option value="phone">Phone</Option>
+                      <Option value="website">Website</Option>
+                    </Select>
                   </Form.Item>
+
                   <Form.Item
                     {...field}
                     label="Link"
                     name={[field.name, 'link']}
-                    rules={[{ required: true }]}
+                    rules={[{ required: true, message: 'Enter link or value' }]}
                   >
-                    <Input placeholder="https://..." />
+                    <Input placeholder="https:// or contact info..." />
                   </Form.Item>
+
                   <MinusCircleOutlined onClick={() => remove(field.name)} />
                 </Space>
               ))}
+
               <Form.Item>
                 <Button
                   type="dashed"
