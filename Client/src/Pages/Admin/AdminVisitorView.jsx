@@ -1,19 +1,24 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { FloatButton, message, Spin } from "antd";
-import { FaHome } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { FloatButton, message, Select, Spin, Button } from 'antd';
+import { FaHome } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import authStore from '../../Store/authStore';
 
 const AdminVisitorView = () => {
+  const { userId: loggedInUserId } = authStore(); // logged-in user
+  const backendUrl = import.meta.env.VITE_BACKEND_API;
+  const adminId = import.meta.env.VITE_DEFAULT_USER_ID; // from .env
+  const navigate = useNavigate();
+
   const [visitors, setVisitors] = useState([]);
   const [users, setUsers] = useState([]);
   const [loadingVisitors, setLoadingVisitors] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
-  const navigate = useNavigate();
 
-  const backendUrl = import.meta.env.VITE_BACKEND_API;
-  const adminId = import.meta.env.VITE_DEFAULT_USER_ID; // from .env
+  // --- Admin check ---
+  const isAdmin = loggedInUserId === adminId;
 
   // --- Fetch my visitors ---
   const fetchVisitors = async () => {
@@ -23,7 +28,7 @@ const AdminVisitorView = () => {
       setVisitors(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
-      messageApi.error("Failed to fetch visitors");
+      messageApi.error('Failed to fetch visitors');
       setVisitors([]);
     } finally {
       setLoadingVisitors(false);
@@ -31,28 +36,28 @@ const AdminVisitorView = () => {
   };
 
   // --- Delete single visitor ---
-  const deleteVisitor = async (visitorId) => {
-    if (!window.confirm("Delete this visitor?")) return;
+  const deleteVisitor = async visitorId => {
+    if (!window.confirm('Delete this visitor?')) return;
     try {
       await axios.delete(`${backendUrl}/api/visits/${adminId}/${visitorId}`);
-      messageApi.success("Visitor deleted");
+      messageApi.success('Visitor deleted');
       fetchVisitors();
     } catch (err) {
       console.error(err);
-      messageApi.error("Failed to delete visitor");
+      messageApi.error('Failed to delete visitor');
     }
   };
 
   // --- Delete all visitors ---
   const deleteAllVisitors = async () => {
-    if (!window.confirm("Delete ALL visitors?")) return;
+    if (!window.confirm('Delete ALL visitors?')) return;
     try {
       await axios.delete(`${backendUrl}/api/visits/${adminId}`);
-      messageApi.success("All visitors deleted");
+      messageApi.success('All visitors deleted');
       fetchVisitors();
     } catch (err) {
       console.error(err);
-      messageApi.error("Failed to delete all visitors");
+      messageApi.error('Failed to delete all visitors');
     }
   };
 
@@ -65,7 +70,7 @@ const AdminVisitorView = () => {
       setUsers(userList);
     } catch (err) {
       console.error(err);
-      messageApi.error("Failed to fetch users");
+      messageApi.error('Failed to fetch users');
       setUsers([]);
     } finally {
       setLoadingUsers(false);
@@ -73,31 +78,65 @@ const AdminVisitorView = () => {
   };
 
   // --- Delete a user ---
-  const deleteUser = async (userId) => {
-    if (!window.confirm("Delete this user?")) return;
+  const deleteUser = async userId => {
+    if (!window.confirm('Delete this user?')) return;
     try {
       await axios.delete(`${backendUrl}/api/user/${userId}`);
-      messageApi.success("User deleted");
+      messageApi.success('User deleted');
       fetchUsers();
     } catch (err) {
       console.error(err);
-      messageApi.error("Failed to delete user");
+      messageApi.error('Failed to delete user');
     }
   };
 
-  useEffect(() => {
-    fetchVisitors();
-    fetchUsers();
-  }, []);
+  const updateApproval = async (userId, value) => {
+    try {
+      await axios.patch(`${backendUrl}/api/user/approval/${userId}`, {
+        approval: value,
+      });
+      messageApi.success('Approval updated');
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+      messageApi.error('Failed to update approval');
+    }
+  };
 
+  // --- Fetch data if admin ---
+  useEffect(() => {
+    if (isAdmin) {
+      fetchVisitors();
+      fetchUsers();
+    }
+  }, [isAdmin]);
+
+  // --- Render if not admin ---
+  if (!isAdmin) {
+    return (
+      <div className=" mx-auto p-6 text-gray-100 bg-gray-900 min-h-screen max-w-screen     shadow-lg flex flex-col justify-center items-center">
+        <h1 className="text-4xl font-bold mb-4 text-red-500">
+          Admin Only Access
+        </h1>
+        <p className="mb-6 text-center">
+          You do not have permission to view this page.
+        </p>
+        <Button type="primary" onClick={() => navigate('/')}>
+          Go to Home
+        </Button>
+      </div>
+    );
+  }
+
+  // --- Admin view ---
   return (
-    <div className="max-w-6xl mx-auto p-6 text-gray-100 bg-gray-900 min-h-screen rounded-2xl shadow-lg">
+    <div className="max-w-6xl mx-auto p-6 text-gray-100 bg-gray-900 min-h-screen  shadow-lg">
       {contextHolder}
 
       <FloatButton
         shape="circle"
         type="primary"
-        style={{ insetInlineEnd: 25 }}
+        style={{ insetInlineEnd: 25,insetBlockEnd:20 }}
         icon={<FaHome />}
         onClick={() => navigate(-1)}
       />
@@ -130,7 +169,10 @@ const AdminVisitorView = () => {
           </thead>
           <tbody>
             {visitors.map((v, i) => (
-              <tr key={v._id} className="border-t border-gray-700 hover:bg-gray-800">
+              <tr
+                key={v._id}
+                className="border-t border-gray-700 hover:bg-gray-800"
+              >
                 <td className="p-2">{i + 1}</td>
                 <td className="p-2">{v.ip}</td>
                 <td className="p-2">{v.page}</td>
@@ -166,15 +208,31 @@ const AdminVisitorView = () => {
               <th className="p-2 text-left">#</th>
               <th className="p-2 text-left">Email</th>
               <th className="p-2 text-left">Name</th>
+              <th className="p-2 text-left">Approval</th>
               <th className="p-2 text-left">Action</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u, i) => (
-              <tr key={u._id} className="border-t border-gray-700 hover:bg-gray-800">
+              <tr
+                key={u._id}
+                className="border-t border-gray-700 hover:bg-gray-800"
+              >
                 <td className="p-2">{i + 1}</td>
                 <td className="p-2">{u.email}</td>
-                <td className="p-2">{u.name || "-"}</td>
+                <td className="p-2">{u.name || '-'}</td>
+                <td className="p-2">
+                  <Select
+                    value={u.approval || 'pending'}
+                    onChange={val => updateApproval(u._id, val)}
+                    style={{ width: 120 }}
+                    options={[
+                      { label: 'Pending', value: 'pending' },
+                      { label: 'Failed', value: 'failed' },
+                      { label: 'Approval', value: 'approval' },
+                    ]}
+                  />
+                </td>
                 <td className="p-2">
                   <button
                     onClick={() => deleteUser(u._id)}

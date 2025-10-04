@@ -10,6 +10,7 @@ import {
   FaEnvelope,
   FaPhone,
   FaHome,
+  FaUser,
 } from 'react-icons/fa';
 import { FloatButton } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -19,7 +20,7 @@ function Home() {
   const { id: routeUserId } = useParams();
 
   const userId =
-    routeUserId|| import.meta.env.VITE_DEFAULT_USER_ID || loggedInUserId 
+    routeUserId || import.meta.env.VITE_DEFAULT_USER_ID || loggedInUserId;
 
   const contactFormRef = useRef();
   const navigate = useNavigate();
@@ -112,15 +113,21 @@ function Home() {
           </button>
         ))}
 
-        {userId && (
-          <FloatButton
-            shape="circle"
-            type="primary"
-            style={{ insetInlineEnd: 25 }}
-            icon={<FaHome />}
-            onClick={() => navigate(-1)}
-          />
-        )}
+        <FloatButton
+          shape="circle"
+          type="primary"
+          style={{ insetInlineEnd: 25, insetBlockEnd: 70 }}
+          icon={<FaHome />}
+          onClick={() => navigate(-1)}
+        />
+
+        <FloatButton
+          shape="circle"
+          type="primary"
+          style={{ insetInlineEnd: 25, insetBlockEnd: 20 }}
+          icon={<FaUser />}
+          onClick={() => navigate('/user')}
+        />
       </nav>
 
       <main className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6 p-4 pt-16">

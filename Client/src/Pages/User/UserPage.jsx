@@ -31,6 +31,10 @@ function UserPage() {
   const { userId, removeUserId } = authStore();
   const [messageApi, contextHolder] = message.useMessage();
 
+  const adminId = import.meta.env.VITE_DEFAULT_USER_ID;
+
+  const isAdmin = userId === adminId;
+
   // Fetch user
   const { data: user } = useQuery({
     queryKey: ['user', userId],
@@ -269,9 +273,24 @@ function UserPage() {
           Delete User
         </Button>
 
+        <Button
+          type="primary"
+          onClick={() => {
+            if (isAdmin) {
+              navigate(`/admin/visitors`);
+            } else {
+              navigate(`/${userId}/visitors`);
+            }
+          }}
+        >
+          Visitors
+        </Button>
+
         <Button type="primary" onClick={() => goHome()}>
           View
         </Button>
+
+  
       </div>
 
       <Form form={form} layout="vertical" onFinish={onFinish}>

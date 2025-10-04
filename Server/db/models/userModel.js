@@ -116,6 +116,11 @@ const userSchema = new mongoose.Schema(
       position: { type: String },
       asPresent: { type: Boolean, default: true },
     },
+    approval: {
+      type: String,
+      enum: ['pending', 'failed', 'approval'],
+      default: 'pending',
+    },
 
     projects: [projectSchema],
     experience: [experienceSchema],

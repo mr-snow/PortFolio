@@ -17,7 +17,7 @@ const VisitorView = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_API;
 
   // Fetch visits for the user
-  const fetchVisits = async (id) => {
+  const fetchVisits = async id => {
     if (!id) return; // prevent undefined
     try {
       setLoading(true);
@@ -33,7 +33,7 @@ const VisitorView = () => {
   };
 
   // Delete single visit
-  const deleteVisit = async (visitId) => {
+  const deleteVisit = async visitId => {
     if (!window.confirm('Delete this visit?')) return;
     try {
       await axios.delete(`${backendUrl}/api/visits/${activeUserId}/${visitId}`);
@@ -77,7 +77,7 @@ const VisitorView = () => {
       <FloatButton
         shape="circle"
         type="primary"
-        style={{ insetInlineEnd: 25 }}
+        style={{ insetInlineEnd: 25, insetBlockEnd: 20 }}
         icon={<FaHome />}
         onClick={() => navigate(-1)}
       />
@@ -105,7 +105,7 @@ const VisitorView = () => {
               </tr>
             </thead>
             <tbody>
-              {visits.map((v) => (
+              {visits.map(v => (
                 <tr key={v._id} className="bg-gray-100 hover:bg-gray-200">
                   <td className="border px-2 py-1">{v.ip}</td>
                   <td className="border px-2 py-1">{v.page}</td>
