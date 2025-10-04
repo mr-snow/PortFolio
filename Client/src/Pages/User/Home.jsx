@@ -34,6 +34,10 @@ function Home() {
   const [emailSent, setEmailSent] = useState(false);
   const isValidObjectId = id => /^[0-9a-fA-F]{24}$/.test(id);
 
+  const [selectedProject, setSelectedProject] = useState(null);
+
+  const closeModal = () => setSelectedProject(null);
+
   const {
     data: user,
     isLoading,
@@ -354,7 +358,9 @@ function Home() {
               </p>
 
               {user?.bio?.currentLocation && (
-                <p className=''>Current Location: {user.bio?.currentLocation || 'N/A'}</p>
+                <p className="">
+                  Current Location: {user.bio?.currentLocation || 'N/A'}
+                </p>
               )}
 
               <p>Status: {statusText}</p>
@@ -620,7 +626,7 @@ function Home() {
       </main>
 
       {/* Projects */}
-      {user.projects?.length > 0 && (
+      {/* {user.projects?.length > 0 && (
         <div
           className="max-w-full p-6 mt-6 bg-gray-900 rounded-xl"
           id="projects"
@@ -678,6 +684,135 @@ function Home() {
               </div>
             ))}
           </div>
+        </div>
+      )} */}
+
+      {/* Projects */}
+      {user.projects?.length > 0 && (
+        <div
+          className="max-w-full p-6 mt-6 bg-gray-900 rounded-xl"
+          id="projects"
+        >
+          <h3 className="text-xl font-bold mb-4 text-center">Projects</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {user.projects.map((proj, idx) => (
+              <div
+                key={idx}
+                className="bg-gray-800 rounded overflow-hidden flex flex-col shadow hover:shadow-lg transition cursor-pointer hover:-translate-y-1 transform"
+                title="Click to view project"
+                onClick={() => proj.description && setSelectedProject(proj)}
+              >
+                {proj.image && (
+                  <img
+                    src={getFileUrl(proj.image)}
+                    alt={proj.title}
+                    className="w-full h-40 object-cover"
+                  />
+                )}
+                <div className="p-4 flex flex-col gap-2">
+                  <h4 className="font-semibold text-gray-200">{proj.title}</h4>
+                  <div className="flex gap-3 mt-2">
+                    {proj.gitLink && (
+                      <a
+                        href={
+                          proj.gitLink.startsWith('http')
+                            ? proj.gitLink
+                            : `https://${proj.gitLink}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-teal-400 text-sm hover:underline"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        GitHub
+                      </a>
+                    )}
+                    {proj.liveLink && (
+                      <a
+                        href={
+                          proj.liveLink.startsWith('http')
+                            ? proj.liveLink
+                            : `https://${proj.liveLink}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-teal-400 text-sm hover:underline"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        Live
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+      
+          {/* Project Modal */}
+          {selectedProject && (
+            <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+              <div className="bg-gray-900 p-6 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
+                <button
+                  onClick={closeModal}
+                  className="absolute top-2 right-2 text-gray-300 hover:text-teal-400 text-2xl font-bold"
+                >
+                  &times;
+                </button>
+
+                <h3 className="text-2xl font-bold mb-4 text-teal-400">
+                  {selectedProject.title}
+                </h3>
+
+                <p className="text-gray-300 mb-4">
+                  {selectedProject.description}
+                </p>
+
+                {selectedProject.gitLink && (
+                  <p className="text-gray-300 mb-2">
+                    GitHub:{' '}
+                    <a
+                      href={
+                        selectedProject.gitLink.startsWith('http')
+                          ? selectedProject.gitLink
+                          : `https://${selectedProject.gitLink}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-teal-400 hover:underline"
+                    >
+                      {selectedProject.gitLink}
+                    </a>
+                  </p>
+                )}
+
+                {selectedProject.liveLink && (
+                  <p className="text-gray-300 mb-2">
+                    Live:{' '}
+                    <a
+                      href={
+                        selectedProject.liveLink.startsWith('http')
+                          ? selectedProject.liveLink
+                          : `https://${selectedProject.liveLink}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-teal-400 hover:underline"
+                    >
+                      {selectedProject.liveLink}
+                    </a>
+                  </p>
+                )}
+
+                {selectedProject.technologies &&
+                  selectedProject.technologies.length > 0 && (
+                    <p className="text-gray-300 mt-2">
+                      Tech: {selectedProject.technologies.join(', ')}
+                    </p>
+                  )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
